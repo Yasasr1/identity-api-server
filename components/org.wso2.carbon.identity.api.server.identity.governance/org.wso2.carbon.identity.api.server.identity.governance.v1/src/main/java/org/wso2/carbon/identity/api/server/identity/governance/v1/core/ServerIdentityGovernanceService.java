@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.governance.IdentityGovernanceService;
 import org.wso2.carbon.identity.governance.bean.ConnectorConfig;
 import org.wso2.carbon.identity.governance.exceptions.general.IdentityGovernanceClientException;
 import org.wso2.carbon.identity.password.expiry.models.PasswordExpiryRule;
+import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -306,6 +307,10 @@ public class ServerIdentityGovernanceService {
                             GovernanceConstants.ErrorMessage.ERROR_CODE_INVALID_PASSWORD_EXPIRY_RULE,
                             propertyReqDTO.getValue());
                 }
+                if (StringUtils.equals(propertyReqDTO.getName(),
+                        IdentityRecoveryConstants.ConnectorConfig.SELF_REGISTRATION_ORGANIZATION_SCOPE)) {
+                    validateSelfRegistrationOrganizationScope(propertyReqDTO.getValue());
+                }
             }
             identityGovernanceService.updateConfiguration(tenantDomain, configurationDetails);
         } catch (IdentityGovernanceClientException e) {
@@ -542,6 +547,17 @@ public class ServerIdentityGovernanceService {
             return true;
         } catch (IllegalArgumentException e) {
             return false;
+        }
+    }
+
+    private void validateSelfRegistrationOrganizationScope(String organizationScope) {
+
+        try {
+            IdentityRecoveryConstants.SelfRegistrationOrganizationScopes.valueOf(organizationScope);
+        } catch (IllegalArgumentException e) {
+            throw handleBadRequestError(
+                    GovernanceConstants.ErrorMessage.ERROR_CODE_INVALID_SELF_REGISTRATION_ORGANIZATION_SCOPE,
+                    organizationScope);
         }
     }
 }
