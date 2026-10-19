@@ -25,6 +25,8 @@ import java.util.List;
 
 import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.Error;
 import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.InstanceStatus;
+import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.WorkflowCallbackRequest;
+import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.WorkflowCallbackResponse;
 import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.WorkflowInstanceListResponse;
 import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.WorkflowInstanceResponse;
 import org.wso2.carbon.identity.rest.api.server.workflow.v1.WorkflowInstancesApiService;
@@ -69,6 +71,29 @@ public class WorkflowInstancesApi  {
     public Response abortWorkflowInstance(@ApiParam(value = "",required=true) @PathParam("instance_id") String instanceId) {
 
         return delegate.abortWorkflowInstance(instanceId );
+    }
+
+    @Valid
+    @POST
+    @Path("/callback")
+    @Consumes({ "application/json" })
+    @Produces({ "application/json" })
+    @ApiOperation(value = "Report the decision of an external workflow engine", notes = "Report the approval decision taken by an external workflow engine for a workflow request, using the correlation ID sent with the request.  <b>Scope required:</b> internal_workflow_instance_update ", response = WorkflowCallbackResponse.class, authorizations = {
+        @Authorization(value = "BasicAuth"),
+        @Authorization(value = "OAuth2", scopes = {
+            
+        })
+    }, tags={ "Workflow Instances Management", })
+    @ApiResponses(value = { 
+        @ApiResponse(code = 200, message = "Decision applied to the workflow instance", response = WorkflowCallbackResponse.class),
+        @ApiResponse(code = 400, message = "Invalid input request", response = Error.class),
+        @ApiResponse(code = 404, message = "The specified resource is not found", response = Error.class),
+        @ApiResponse(code = 409, message = "The workflow instance is not pending", response = Error.class),
+        @ApiResponse(code = 500, message = "Internal Server Error", response = Error.class)
+    })
+    public Response handleWorkflowCallback(@ApiParam(value = "" ,required=true) @Valid WorkflowCallbackRequest workflowCallbackRequest) {
+
+        return delegate.handleWorkflowCallback(workflowCallbackRequest );
     }
 
     @Valid

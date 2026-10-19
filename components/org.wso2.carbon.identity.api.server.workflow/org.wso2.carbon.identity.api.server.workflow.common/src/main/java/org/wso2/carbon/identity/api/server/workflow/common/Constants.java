@@ -96,6 +96,12 @@ public class Constants {
                 "Encountered an error while deleting the workflow log identifier %s."),
         ERROR_CODE_CLIENT_ERROR_ABORTING_WORKFLOW_INSTANCE("51013", "Unable to abort workflow instance.",
                 "Encountered an error while aborting the workflow instance identifier %s."),
+        ERROR_CODE_CLIENT_ERROR_WORKFLOW_CALLBACK("51014", "Unable to process the workflow callback.",
+                "Encountered an error while processing the callback for the workflow request %s."),
+        ERROR_CODE_WORKFLOW_CALLBACK_NOT_FOUND("51015", "Workflow request not found.",
+                "Unable to find a workflow request matching the correlation ID %s."),
+        ERROR_CODE_WORKFLOW_CALLBACK_NOT_PENDING("51016", "Workflow request is not pending.",
+                "The workflow request matching the correlation ID %s is not pending."),
         // Server Errors starting from 500xx.
         ERROR_CODE_ERROR_LISTING_WORKFLOWS("50020", "Unable to list existing workflows",
                 "Server encountered an error while listing the workflows."),
@@ -132,7 +138,9 @@ public class Constants {
         ERROR_CODE_ERROR_LISTING_WORKFLOW_INSTANCES("50032", "Unable to list existing workflow logs.",
                 "Server encountered an error while listing the workflow logs."),
         ERROR_CODE_ERROR_ABORTING_WORKFLOW_INSTANCE("50033", "Unable to abort workflow instance.",
-                "Server encountered an error while aborting the workflow instance for identifier %s.");
+                "Server encountered an error while aborting the workflow instance for identifier %s."),
+        ERROR_CODE_ERROR_WORKFLOW_CALLBACK("50034", "Unable to process the workflow callback.",
+                "Server encountered an error while processing the callback for the workflow request %s.");
 
         private final String code;
         private final String message;

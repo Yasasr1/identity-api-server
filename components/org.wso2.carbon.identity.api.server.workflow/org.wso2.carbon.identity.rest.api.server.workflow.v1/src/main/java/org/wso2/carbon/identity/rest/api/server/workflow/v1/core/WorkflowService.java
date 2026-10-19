@@ -41,6 +41,8 @@ import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.WorkflowAssoci
 import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.WorkflowAssociationPatchRequest;
 import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.WorkflowAssociationRequest;
 import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.WorkflowAssociationResponse;
+import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.WorkflowCallbackRequest;
+import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.WorkflowCallbackResponse;
 import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.WorkflowInstanceListItem;
 import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.WorkflowInstanceListResponse;
 import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.WorkflowInstanceResponse;
@@ -58,10 +60,13 @@ import org.wso2.carbon.identity.rule.management.api.service.RuleManagementServic
 import org.wso2.carbon.identity.workflow.engine.ApprovalTaskService;
 import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineClientException;
 import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineException;
+import org.wso2.carbon.identity.workflow.mgt.WorkFlowExecutorManager;
 import org.wso2.carbon.identity.workflow.mgt.WorkflowManagementService;
 import org.wso2.carbon.identity.workflow.mgt.bean.Parameter;
 import org.wso2.carbon.identity.workflow.mgt.bean.Workflow;
 import org.wso2.carbon.identity.workflow.mgt.bean.WorkflowRequestFilterResponse;
+import org.wso2.carbon.identity.workflow.mgt.dao.WorkflowRequestAssociationDAO;
+import org.wso2.carbon.identity.workflow.mgt.dao.WorkflowRequestDAO;
 import org.wso2.carbon.identity.workflow.mgt.dto.Association;
 import org.wso2.carbon.identity.workflow.mgt.dto.WorkflowEvent;
 import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowClientException;
@@ -95,6 +100,8 @@ public class WorkflowService {
     private static final Log log = LogFactory.getLog(WorkflowService.class);
     private static final String CHANNELS = "channels";
     private static final String EVENTS = "events";
+    private static final String CALLBACK_REASON = "reason";
+    private static final String CALLBACK_DECIDED_BY = "decidedBy";
     private final WorkflowManagementService workflowManagementService;
     private final ApprovalTaskService approvalEventService;
     private final RuleManagementService ruleManagementService;
@@ -944,6 +951,66 @@ public class WorkflowService {
                     instanceId, new WorkflowClientException(e.getMessage(), e));
         } catch (WorkflowException | WorkflowEngineException e) {
             throw handleServerError(Constants.ErrorMessage.ERROR_CODE_ERROR_ABORTING_WORKFLOW_INSTANCE, instanceId, e);
+        }
+    }
+
+    /**
+     * Applies the decision of an external workflow engine to the workflow request it was sent.
+     *
+     * @param callbackRequest Decision reported by the external workflow engine.
+     * @return Status of the workflow instance after applying the decision.
+     */
+    public WorkflowCallbackResponse handleWorkflowCallback(WorkflowCallbackRequest callbackRequest) {
+
+        String correlationId = callbackRequest.getCorrelationId();
+        try {
+            if (StringUtils.isBlank(correlationId) || callbackRequest.getStatus() == null) {
+                throw new WorkflowClientException("Correlation ID and status are required.");
+            }
+            WorkflowRequestAssociationDAO requestAssociationDAO = new WorkflowRequestAssociationDAO();
+            WorkflowRequestDAO requestDAO = new WorkflowRequestDAO();
+            String instanceId = requestAssociationDAO.getRequestIdOfRelationship(correlationId);
+            org.wso2.carbon.identity.workflow.mgt.dto.WorkflowRequest workflowRequest =
+                    StringUtils.isBlank(instanceId) ? null : requestDAO.retrieveWorkflow(instanceId);
+            // Requests of other tenants (organizations) are reported as not found.
+            if (workflowRequest == null ||
+                    workflowRequest.getTenantId() != CarbonContext.getThreadLocalCarbonContext().getTenantId()) {
+                throw handleClientError(Response.Status.NOT_FOUND,
+                        Constants.ErrorMessage.ERROR_CODE_WORKFLOW_CALLBACK_NOT_FOUND, correlationId,
+                        new WorkflowClientException("No workflow request found for the correlation ID: " +
+                                correlationId));
+            }
+            if (!WorkflowRequestStatus.PENDING.toString().equals(requestDAO.retrieveStatusOfWorkflow(instanceId)) ||
+                    !WorkflowRequestStatus.PENDING.toString().equals(
+                            requestAssociationDAO.getStatusOfRelationship(correlationId))) {
+                throw handleClientError(Response.Status.CONFLICT,
+                        Constants.ErrorMessage.ERROR_CODE_WORKFLOW_CALLBACK_NOT_PENDING, correlationId,
+                        new WorkflowClientException("The workflow request for the correlation ID: " + correlationId +
+                                " is not pending."));
+            }
+
+            Map<String, Object> responseParams = new HashMap<>();
+            if (callbackRequest.getProperties() != null) {
+                responseParams.putAll(callbackRequest.getProperties());
+            }
+            if (StringUtils.isNotBlank(callbackRequest.getReason())) {
+                responseParams.put(CALLBACK_REASON, callbackRequest.getReason());
+            }
+            if (StringUtils.isNotBlank(callbackRequest.getDecidedBy())) {
+                responseParams.put(CALLBACK_DECIDED_BY, callbackRequest.getDecidedBy());
+            }
+            WorkFlowExecutorManager.getInstance().handleCallback(correlationId,
+                    callbackRequest.getStatus().toString(), responseParams);
+
+            return new WorkflowCallbackResponse()
+                    .correlationId(correlationId)
+                    .instanceId(instanceId)
+                    .status(requestDAO.retrieveStatusOfWorkflow(instanceId));
+        } catch (WorkflowClientException e) {
+            throw handleClientError(Constants.ErrorMessage.ERROR_CODE_CLIENT_ERROR_WORKFLOW_CALLBACK,
+                    correlationId, e);
+        } catch (WorkflowException e) {
+            throw handleServerError(Constants.ErrorMessage.ERROR_CODE_ERROR_WORKFLOW_CALLBACK, correlationId, e);
         }
     }
 

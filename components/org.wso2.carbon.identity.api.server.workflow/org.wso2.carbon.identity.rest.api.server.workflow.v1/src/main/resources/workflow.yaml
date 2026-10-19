@@ -605,6 +605,40 @@ paths:
         "500":
           $ref: "#/components/responses/ServerError"
 
+  /workflow-instances/callback:
+    post:
+      tags:
+        - Workflow Instances Management
+      summary: Report the decision of an external workflow engine
+      description: |
+        Report the approval decision taken by an external workflow engine for a workflow request, using the
+        correlation ID sent with the request. On approval, the values in `properties` override the original
+        request (e.g. `roles` for SHARE_USER; `name`, `description`, `attributes` for ADD_ORGANIZATION).
+
+        <b>Scope required:</b> internal_workflow_instance_update
+      operationId: handleWorkflowCallback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowCallbackRequest"
+      responses:
+        "200":
+          description: Decision applied to the workflow instance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowCallbackResponse"
+        "400":
+          $ref: "#/components/responses/InvalidInput"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The workflow instance is not pending
+        "500":
+          $ref: "#/components/responses/ServerError"
+
 
   /workflow-engines:
     get:
@@ -1047,6 +1081,36 @@ components:
           type: string
           example: "some_value"
 
+    WorkflowCallbackRequest:
+      type: object
+      required:
+        - correlationId
+        - status
+      properties:
+        correlationId:
+          type: string
+          description: Correlation ID sent to the external workflow engine with the workflow request.
+        status:
+          type: string
+          enum:
+            - APPROVED
+            - REJECTED
+        reason:
+          type: string
+        decidedBy:
+          type: string
+        properties:
+          type: object
+          additionalProperties: true
+    WorkflowCallbackResponse:
+      type: object
+      properties:
+        correlationId:
+          type: string
+        instanceId:
+          type: string
+        status:
+          type: string
     InstanceStatus:
       type: string
       enum: [ALL_TASKS, PENDING, APPROVED, REJECTED, FAILED, DELETED, ABORTED]
@@ -1066,6 +1130,8 @@ components:
         - DELETE_USER_CLAIMS
         - UPDATE_USER_CLAIMS
         - SET_MULTIPLE_USER_CLAIMS
+        - SHARE_USER
+        - ADD_ORGANIZATION
       description: "Name of the user operation"
 
     Error:

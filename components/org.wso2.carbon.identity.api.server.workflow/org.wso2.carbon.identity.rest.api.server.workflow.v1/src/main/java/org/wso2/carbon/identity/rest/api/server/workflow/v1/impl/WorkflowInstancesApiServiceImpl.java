@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.rest.api.server.workflow.v1.WorkflowInstancesApi
 import org.wso2.carbon.identity.rest.api.server.workflow.v1.core.WorkflowService;
 import org.wso2.carbon.identity.rest.api.server.workflow.v1.factories.WorkflowServiceFactory;
 import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.InstanceStatus;
+import org.wso2.carbon.identity.rest.api.server.workflow.v1.model.WorkflowCallbackRequest;
 
 import javax.ws.rs.core.Response;
 
@@ -55,6 +56,12 @@ public class WorkflowInstancesApiServiceImpl implements WorkflowInstancesApiServ
     public Response getWorkflowInstanceById(String instanceId) {
 
         return Response.ok().entity(workflowService.getWorkflowInstanceById(instanceId)).build();
+    }
+
+    @Override
+    public Response handleWorkflowCallback(WorkflowCallbackRequest workflowCallbackRequest) {
+
+        return Response.ok().entity(workflowService.handleWorkflowCallback(workflowCallbackRequest)).build();
     }
 
     @Override
