@@ -613,7 +613,7 @@ paths:
       description: |
         Report the approval decision taken by an external workflow engine for a workflow request, using the
         correlation ID sent with the request. On approval, the values in `properties` override the original
-        request (e.g. `roles` for SHARE_USER; `name`, `description`, `attributes` for ADD_ORGANIZATION).
+        request (e.g. `roles` for SHARE_USER and ADD_SHARED_USER_ROLES; `name`, `description`, `attributes` for ADD_ORGANIZATION).
 
         <b>Scope required:</b> internal_workflow_instance_update
       operationId: handleWorkflowCallback
@@ -1132,6 +1132,7 @@ components:
         - SET_MULTIPLE_USER_CLAIMS
         - SHARE_USER
         - ADD_ORGANIZATION
+        - ADD_SHARED_USER_ROLES
       description: "Name of the user operation"
 
     Error:
